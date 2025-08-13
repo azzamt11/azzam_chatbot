@@ -6,12 +6,15 @@ class IndoBertChatbot:
     A chatbot that answers questions based on a single, pre-loaded context.
     It uses a fine-tuned IndoBERT model for extractive question-answering.
     """
-    def __init__(self, model_name="indolem/indobert-base-uncased", context_file_path="dataset/my_descriptions.txt"):
-        print(f"Loading tokenizer and model: {model_name}...")
+    def __init__(self, model_name, context_file_path):
+        # Load the tokenizer and model.
+        # The model_name will be the path to your fine-tuned model folder.
+        print(f"Loading tokenizer and model from: {model_name}...")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForQuestionAnswering.from_pretrained(model_name)
         print("Model and tokenizer loaded successfully.")
         
+        # Load the context (the long paragraph) once when the chatbot is initialized
         try:
             with open(context_file_path, 'r', encoding='utf-8') as f:
                 self.context = f.read()
@@ -46,7 +49,7 @@ class IndoBertChatbot:
         answer_start_index = torch.argmax(start_logits)
         answer_end_index = torch.argmax(end_logits)
         
-        # Calculate a confidence score. A simple way is to use the sum of max logits.
+        # Calculate a confidence score from the maximum logits.
         confidence_score = (torch.max(start_logits) + torch.max(end_logits)).item()
 
         # If the start index is after the end index, the answer is invalid

@@ -1,21 +1,17 @@
 import os
-from datasets import load_dataset, Dataset
+from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForQuestionAnswering, TrainingArguments, Trainer
 
-def train_tinybert_for_qa():
+def train_qa_model():
     """
-    Fine-tunes a TinyBERT model for extractive question-answering on a custom dataset.
+    Fine-tunes a model for extractive question-answering.
     """
-    
-    # 1. Load the dataset from the 'dataset' folder
+    # 1. Load the dataset
     print("Loading dataset...")
     try:
-        # Load the JSON file. Assumes the file is named 'my_qa_data.json'
-        # and is inside a 'dataset' folder.
         dataset = load_dataset('json', data_files='dataset/my_qa_data.json', split='train')
     except Exception as e:
         print(f"Error loading dataset: {e}")
-        print("Please ensure 'dataset/my_qa_data.json' exists and is in the correct format.")
         return
         
     print("Dataset loaded successfully.")
@@ -38,34 +34,23 @@ def train_tinybert_for_qa():
             truncation="only_second",
             padding="max_length",
         )
-        
-        # Tokenize the answers to get the correct start and end positions
-        answer_texts = [ans['text'][0] for ans in examples["answers"]]
-        answer_starts = [ans['answer_start'][0] for ans in examples["answers"]]
-
-        # Add the 'start_positions' and 'end_positions' labels
-        inputs.update({
-            'start_positions': answer_starts,
-            'end_positions': [start + len(text) for start, text in zip(answer_starts, answer_texts)]
-        })
-        
         return inputs
 
     tokenized_dataset = dataset.map(preprocess_function, batched=True, remove_columns=dataset.column_names)
     print("Dataset tokenized.")
     
     # 4. Define training arguments and initialize the Trainer
-    output_dir = "./tinybert_qa_finetuned"
+    output_dir = "./fine-tuned-model"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     training_args = TrainingArguments(
         output_dir=output_dir,
         learning_rate=2e-5,
-        per_device_train_batch_size=8,
+        per_device_train_batch_size=4, # A smaller batch size for CPU/limited GPU
         num_train_epochs=3,
         weight_decay=0.01,
-        save_strategy="epoch",  # Save the model at the end of each epoch
+        save_strategy="epoch",
     )
 
     trainer = Trainer(
@@ -85,4 +70,4 @@ def train_tinybert_for_qa():
     print(f"Fine-tuned model saved to {output_dir}")
 
 if __name__ == "__main__":
-    train_tinybert_for_qa()
+    train_qa_model()
